@@ -4,11 +4,9 @@ flask-login
 werkzeug
 google-auth
 google-auth-oauthlib
-google-auth-httplib2
 google-api-python-client
 python-dotenv
 requests
 flask-mail
 gunicorn
-waitress
 requests_oauthlib

@@ -17,3 +17,7 @@ services:
         value: /opt/render/project/src
       - key: WEB_CONCURRENCY
         value: 4
+      - key: GOOGLE_CLIENT_ID
+        value: "your-google-client-id"
+      - key: GOOGLE_CLIENT_SECRET
+        value: "your-google-client-secret"
