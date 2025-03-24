@@ -2,12 +2,14 @@ services:
   - type: web
     name: flask-app
     env: python
-    buildCommand: ./build.sh
-    startCommand: python -m gunicorn app:app
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: PRODUCTION
         value: true
       - key: PYTHON_VERSION
         value: 3.9.18
+      - key: PORT
+        value: 10000
       - key: PATH
         value: /opt/render/project/python/.local/bin:/opt/render/project/python/bin:$PATH
