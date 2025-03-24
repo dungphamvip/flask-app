@@ -40,4 +40,10 @@ ENV/
 .env
 
 # Backup files
-backups/ 
+backups/
+
+# Additional changes from the code block
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store 

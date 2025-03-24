@@ -9,6 +9,8 @@ services:
         value: 3.9.0
       - key: PRODUCTION
         value: true
+      - key: FLASK_ENV
+        value: production
       - key: PORT
         value: 10000
       - key: PYTHONPATH
