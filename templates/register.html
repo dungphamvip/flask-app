@@ -386,7 +386,7 @@
     </div>
 
     <video autoplay muted loop id="video-background">
-        <source src="{{ url_for('static', filename='videos/background.mp4') }}" type="video/mp4">
+        <source src="https://assets.codepen.io/3364143/7btrrd.mp4" type="video/mp4">
     </video>
 
     <div class="container">
@@ -498,6 +498,25 @@
                 }, 0);
             });
         });
+
+        // Copy phần script tạo tuyết từ file login.html
+        function createSnow() {
+            const snow = document.createElement('div');
+            snow.classList.add('snow');
+            
+            snow.style.left = Math.random() * 100 + 'vw';
+            snow.style.animationDuration = Math.random() * 3 + 2 + 's';
+            snow.style.opacity = Math.random();
+            snow.style.width = snow.style.height = Math.random() * 4 + 2 + 'px';
+            
+            document.body.appendChild(snow);
+            
+            setTimeout(() => {
+                snow.remove();
+            }, 5000);
+        }
+
+        setInterval(createSnow, 100);
     </script>
 </body>
 </html>
