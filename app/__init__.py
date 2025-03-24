@@ -52,19 +52,27 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
-            login_user(user)
-            flash('Đăng nhập thành công!', 'success')
+    try:
+        if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
-        else:
-            flash('Tên đăng nhập hoặc mật khẩu không đúng!', 'error')
-    
-    return render_template('login.html')
+
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            user = User.query.filter_by(username=username).first()
+            
+            if user and user.check_password(password):
+                login_user(user)
+                flash('Đăng nhập thành công!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Tên đăng nhập hoặc mật khẩu không đúng!', 'error')
+        
+        return render_template('login.html')
+    except Exception as e:
+        app.logger.error(f"Login error: {str(e)}")
+        flash('Có lỗi xảy ra. Vui lòng thử lại sau.', 'error')
+        return render_template('login.html')
 
 # Google Login Routes
 @app.route('/google-login')
@@ -134,4 +142,8 @@ def dashboard():
 def logout():
     logout_user()
     flash('Đã đăng xuất!', 'success')
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
+
+# Khởi tạo database
+with app.app_context():
+    db.create_all()
