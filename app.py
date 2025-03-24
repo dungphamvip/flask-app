@@ -398,19 +398,15 @@ def backup_account():
 if __name__ == '__main__':
     init_db()
     
-    # Cho phép HTTP trong development
-    if not os.environ.get('PRODUCTION', False):
-        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    
-    # Cấu hình SSL context cho HTTPS
-    ssl_context = None
+    # Cấu hình cho production
     if os.environ.get('PRODUCTION', False):
-        ssl_context = 'adhoc'
-    
-    port = int(os.environ.get('PORT', 80))
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        ssl_context=ssl_context,
-        debug=not os.environ.get('PRODUCTION', False)
-    )
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=int(os.environ.get('PORT', 80)))
+    else:
+        # Development mode
+        os.environ['FLASK_DEBUG'] = '1'
+        app.run(
+            host='0.0.0.0',
+            port=int(os.environ.get('PORT', 80)),
+            debug=True
+        )
