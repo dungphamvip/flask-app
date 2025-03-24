@@ -18,7 +18,6 @@ from flask_mail import Mail, Message
 import secrets
 import csv
 import io
-from pyngrok import ngrok
 
 # Cho phép HTTP trong môi trường phát triển
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -430,13 +429,5 @@ def backup_account():
 
 if __name__ == '__main__':
     init_db()
-    try:
-        print(f"\nĐang chạy ứng dụng tại:")
-        print(f"- Local URL: http://localhost:5000")
-        print(f"- Network URL: http://{local_ip}:5000")
-        print("\nNhấn CTRL+C để dừng server")
-        
-        port = int(os.environ.get('PORT', 5000))
-        app.run(host='0.0.0.0', port=port)
-    except Exception as e:
-        print(f"Lỗi khởi động server: {str(e)}")
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
