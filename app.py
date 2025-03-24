@@ -18,6 +18,7 @@ from flask_mail import Mail, Message
 import secrets
 import csv
 import io
+from requests_oauthlib import OAuth2Session
 
 # Cho phép HTTP trong môi trường phát triển
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -40,7 +41,7 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 
 # Khởi tạo URL cho ứng dụng
-BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:80')
 PUBLIC_URL = os.getenv('PUBLIC_URL', BASE_URL)
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
@@ -53,24 +54,119 @@ login_manager.login_view = 'login'
 mail = Mail(app)
 
 # Cấu hình Google OAuth
-GOOGLE_SCOPES = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-]
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+GOOGLE_SCOPES = ["openid", "email", "profile"]
 
-def get_google_flow():
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [f"{PUBLIC_URL}/google/callback"]
-            }
-        },
-        scopes=GOOGLE_SCOPES
-    )
+def get_google_provider_cfg():
+    try:
+        return requests.get(GOOGLE_DISCOVERY_URL).json()
+    except Exception as e:
+        app.logger.error(f"Error fetching Google provider config: {e}")
+        return None
+
+@app.route('/google/login')
+def google_login():
+    try:
+        # Lấy cấu hình từ Google
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            raise Exception("Could not fetch Google provider config")
+
+        # Tạo flow
+        client = OAuth2Session(
+            GOOGLE_CLIENT_ID,
+            scope=GOOGLE_SCOPES,
+            redirect_uri=f"{PUBLIC_URL}/google/callback"
+        )
+
+        # Tạo URL authorization
+        authorization_url, state = client.authorization_url(
+            google_provider_cfg["authorization_endpoint"],
+            access_type="offline",
+            prompt="consent",
+            include_granted_scopes="true"
+        )
+
+        # Lưu state
+        session["oauth_state"] = state
+        
+        app.logger.info(f"Starting OAuth flow. Auth URL: {authorization_url}")
+        return redirect(authorization_url)
+
+    except Exception as e:
+        app.logger.error(f"Error in Google login: {e}")
+        flash("Có lỗi xảy ra khi kết nối với Google", "error")
+        return redirect(url_for("login"))
+
+@app.route('/google/callback')
+def google_callback():
+    try:
+        # Verify state
+        if "oauth_state" not in session:
+            raise Exception("Missing OAuth state")
+
+        # Lấy cấu hình từ Google
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            raise Exception("Could not fetch Google provider config")
+
+        # Tạo client
+        client = OAuth2Session(
+            GOOGLE_CLIENT_ID,
+            state=session["oauth_state"],
+            redirect_uri=f"{PUBLIC_URL}/google/callback"
+        )
+
+        # Fetch token
+        token = client.fetch_token(
+            google_provider_cfg["token_endpoint"],
+            client_secret=GOOGLE_CLIENT_SECRET,
+            authorization_response=request.url.replace('http://', 'https://')
+        )
+
+        # Lấy thông tin user
+        resp = client.get(google_provider_cfg["userinfo_endpoint"])
+        if not resp.ok:
+            raise Exception("Failed to get user info")
+
+        userinfo = resp.json()
+        if not userinfo.get("email_verified"):
+            flash("Email chưa được xác thực", "error")
+            return redirect(url_for("login"))
+
+        # Xử lý thông tin user
+        email = userinfo["email"]
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # Tạo user mới
+            username = userinfo.get("name", email.split("@")[0]).lower().replace(" ", "_")
+            base_username = username
+            counter = 1
+            
+            # Đảm bảo username là duy nhất
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            user = User(
+                username=username,
+                email=email,
+                social_id=userinfo["sub"],
+                social_type="google"
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        # Login user
+        login_user(user)
+        flash("Đăng nhập thành công!", "success")
+        return redirect(url_for("dashboard"))
+
+    except Exception as e:
+        app.logger.error(f"Error in Google callback: {e}")
+        flash(f"Lỗi xác thực: {str(e)}", "error")
+        return redirect(url_for("login"))
 
 # Model User
 class User(UserMixin, db.Model):
@@ -208,109 +304,6 @@ def logout():
     flash('Đã đăng xuất!', 'success')
     return redirect(url_for('index'))
 
-@app.route('/google/login')
-def google_login():
-    try:
-        flow = get_google_flow()
-        flow.redirect_uri = f"{PUBLIC_URL}/google/callback"
-        
-        # Thêm các tham số bảo mật
-        authorization_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true',
-            prompt='consent',
-            state=secrets.token_urlsafe(16)
-        )
-        
-        session['state'] = state
-        session['next'] = request.args.get('next', url_for('dashboard'))
-        
-        # Log thông tin debug
-        app.logger.info(f"Login URL: {authorization_url}")
-        app.logger.info(f"State: {state}")
-        app.logger.info(f"Redirect URI: {flow.redirect_uri}")
-        
-        return redirect(authorization_url)
-        
-    except Exception as e:
-        app.logger.error(f"Lỗi đăng nhập Google: {str(e)}")
-        flash('Có lỗi xảy ra khi đăng nhập bằng Google! Chi tiết: ' + str(e), 'error')
-        return redirect(url_for('login'))
-
-@app.route('/google/callback')
-def google_callback():
-    try:
-        # Kiểm tra state
-        state = session.get('state')
-        if not state or state != request.args.get('state'):
-            raise ValueError("Invalid state parameter")
-
-        flow = get_google_flow()
-        flow.redirect_uri = f"{PUBLIC_URL}/google/callback"
-        
-        # Log thông tin debug
-        app.logger.info(f"Callback URL: {request.url}")
-        app.logger.info(f"State from session: {state}")
-        app.logger.info(f"State from request: {request.args.get('state')}")
-        
-        # Đảm bảo URL callback luôn dùng HTTPS
-        authorization_response = request.url
-        if authorization_response.startswith('http://'):
-            authorization_response = 'https://' + authorization_response[7:]
-            
-        flow.fetch_token(authorization_response=authorization_response)
-        
-        # Xóa state sau khi sử dụng
-        session.pop('state', None)
-        
-        credentials = flow.credentials
-        token_request = requests.Request()
-        
-        # Verify ID token
-        id_info = id_token.verify_oauth2_token(
-            credentials.id_token,
-            token_request,
-            GOOGLE_CLIENT_ID,
-            clock_skew_in_seconds=10
-        )
-        
-        email = id_info.get('email')
-        if not email:
-            raise ValueError("Không lấy được email từ Google")
-            
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            # Tạo user mới nếu chưa tồn tại
-            username = email.split('@')[0]
-            # Đảm bảo username là duy nhất
-            base_username = username
-            counter = 1
-            while User.query.filter_by(username=username).first():
-                username = f"{base_username}{counter}"
-                counter += 1
-                
-            user = User(
-                username=username,
-                email=email,
-                social_id=id_info.get('sub'),
-                social_type='google'
-            )
-            db.session.add(user)
-            db.session.commit()
-            
-        login_user(user)
-        flash('Đăng nhập thành công!', 'success')
-        
-        # Chuyển hướng đến trang được yêu cầu trước đó
-        next_page = session.get('next', url_for('dashboard'))
-        session.pop('next', None)
-        return redirect(next_page)
-        
-    except Exception as e:
-        app.logger.error(f"Lỗi callback Google: {str(e)}")
-        flash('Có lỗi xảy ra khi xác thực với Google! Chi tiết: ' + str(e), 'error')
-        return redirect(url_for('login'))
-
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -414,7 +407,7 @@ if __name__ == '__main__':
     if os.environ.get('PRODUCTION', False):
         ssl_context = 'adhoc'
     
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 80))
     app.run(
         host='0.0.0.0',
         port=port,
