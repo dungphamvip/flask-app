@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-from app import app as application
+from app import app
 
 # Load biến môi trường
 load_dotenv()
@@ -22,5 +22,5 @@ GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 BASE_URL = os.getenv('BASE_URL')
 PUBLIC_URL = os.getenv('PUBLIC_URL')
 
-if __name__ == "__main__":
-    application.run()
+if __name__ == '__main__':
+    app.run()
