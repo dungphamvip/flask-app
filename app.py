@@ -214,36 +214,64 @@ def google_login():
         flow = get_google_flow()
         flow.redirect_uri = f"{PUBLIC_URL}/google/callback"
         
+        # Thêm các tham số bảo mật
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true'
+            include_granted_scopes='true',
+            prompt='consent',
+            state=secrets.token_urlsafe(16)
         )
         
         session['state'] = state
+        session['next'] = request.args.get('next', url_for('dashboard'))
+        
+        # Log thông tin debug
+        app.logger.info(f"Login URL: {authorization_url}")
+        app.logger.info(f"State: {state}")
+        app.logger.info(f"Redirect URI: {flow.redirect_uri}")
+        
         return redirect(authorization_url)
         
     except Exception as e:
         app.logger.error(f"Lỗi đăng nhập Google: {str(e)}")
-        flash('Có lỗi xảy ra khi đăng nhập bằng Google!', 'error')
+        flash('Có lỗi xảy ra khi đăng nhập bằng Google! Chi tiết: ' + str(e), 'error')
         return redirect(url_for('login'))
 
 @app.route('/google/callback')
 def google_callback():
     try:
+        # Kiểm tra state
         state = session.get('state')
-        if not state:
-            raise ValueError("State không hợp lệ")
+        if not state or state != request.args.get('state'):
+            raise ValueError("Invalid state parameter")
 
         flow = get_google_flow()
         flow.redirect_uri = f"{PUBLIC_URL}/google/callback"
-        flow.fetch_token(authorization_response=request.url)
-
+        
+        # Log thông tin debug
+        app.logger.info(f"Callback URL: {request.url}")
+        app.logger.info(f"State from session: {state}")
+        app.logger.info(f"State from request: {request.args.get('state')}")
+        
+        # Đảm bảo URL callback luôn dùng HTTPS
+        authorization_response = request.url
+        if authorization_response.startswith('http://'):
+            authorization_response = 'https://' + authorization_response[7:]
+            
+        flow.fetch_token(authorization_response=authorization_response)
+        
         # Xóa state sau khi sử dụng
-        del session['state']
+        session.pop('state', None)
         
         credentials = flow.credentials
+        token_request = requests.Request()
+        
+        # Verify ID token
         id_info = id_token.verify_oauth2_token(
-            credentials.id_token, requests.Request(), GOOGLE_CLIENT_ID
+            credentials.id_token,
+            token_request,
+            GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=10
         )
         
         email = id_info.get('email')
@@ -253,8 +281,16 @@ def google_callback():
         user = User.query.filter_by(email=email).first()
         if not user:
             # Tạo user mới nếu chưa tồn tại
+            username = email.split('@')[0]
+            # Đảm bảo username là duy nhất
+            base_username = username
+            counter = 1
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{counter}"
+                counter += 1
+                
             user = User(
-                username=email.split('@')[0],
+                username=username,
                 email=email,
                 social_id=id_info.get('sub'),
                 social_type='google'
@@ -264,11 +300,15 @@ def google_callback():
             
         login_user(user)
         flash('Đăng nhập thành công!', 'success')
-        return redirect(url_for('dashboard'))
+        
+        # Chuyển hướng đến trang được yêu cầu trước đó
+        next_page = session.get('next', url_for('dashboard'))
+        session.pop('next', None)
+        return redirect(next_page)
         
     except Exception as e:
         app.logger.error(f"Lỗi callback Google: {str(e)}")
-        flash('Có lỗi xảy ra khi xác thực với Google!', 'error')
+        flash('Có lỗi xảy ra khi xác thực với Google! Chi tiết: ' + str(e), 'error')
         return redirect(url_for('login'))
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
