@@ -1,0 +1,17 @@
+runtime: python39
+instance_class: F1
+
+env_variables:
+  GOOGLE_CLIENT_ID: "your-client-id"
+  GOOGLE_CLIENT_SECRET: "your-client-secret"
+
+handlers:
+- url: /static
+  static_dir: static
+  secure: always
+
+- url: /.*
+  script: auto
+  secure: always
+
+entrypoint: gunicorn -b :$PORT app:app 

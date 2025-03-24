@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/snow.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        #video-background {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: 0;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 100%;
+            max-width: 320px;
+            position: relative;
+            z-index: 2;
+        }
+        h2 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #ffffff;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: rgba(255, 255, 255, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .error, .success {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            animation: slideInBottom 0.5s ease-out forwards, fadeOutBottom 0.5s ease-out 3s forwards;
+            min-width: 200px;
+            text-align: center;
+            transform-origin: bottom right;
+        }
+        .success {
+            background-color: rgba(46, 213, 115, 0.95);
+            border: 1px solid rgba(46, 213, 115, 0.5);
+        }
+        .error {
+            background-color: rgba(255, 71, 87, 0.95);
+            border: 1px solid rgba(255, 71, 87, 0.5);
+        }
+        @keyframes slideInBottom {
+            from {
+                transform: translateY(100%) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+        @keyframes fadeOutBottom {
+            from {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100%) scale(0.8);
+                opacity: 0;
+            }
+        }
+        .social-login {
+            margin-top: 20px;
+            text-align: center;
+            padding: 15px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .social-login p {
+            color: #ffffff;
+            margin-bottom: 15px;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+        }
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            margin: 8px auto;
+            width: 90%;
+            border-radius: 6px;
+            text-decoration: none;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .google-btn {
+            background-color: rgba(219, 68, 55, 0.9);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .google-btn:hover {
+            background-color: rgba(219, 68, 55, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .google-btn img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px 0;
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+        }
+        .register-link a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 4px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        .register-link a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: #ffffff;
+            transform: translateY(-2px);
+        }
+        .social-btn img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .facebook-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .facebook-link a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            background: rgba(59, 89, 152, 0.8);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .facebook-link a:hover {
+            background: rgba(59, 89, 152, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .facebook-link img {
+            width: 24px;
+            height: 24px;
+        }
+        .password-field {
+            position: relative;
+            width: 100%;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            padding: 0;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .toggle-password:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-password:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        input[type="password"] {
+            padding-right: 45px;
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+
+        .forgot-password a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 13px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .forgot-password a:hover {
+            opacity: 1;
+            text-decoration: underline;
+            transform: translateX(3px);
+            display: inline-block;
+        }
+
+        /* Đơn giản hóa hiệu ứng chuyển trang */
+        .page-transition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .page-transition.active {
+            opacity: 0.5;
+            visibility: visible;
+        }
+
+        /* Thêm transition cho các link */
+        a {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="snowflakes" aria-hidden="true">
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+    </div>
+    <div class="facebook-link">
+        <a href="https://www.facebook.com/pham.dung.467275" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/600px-Facebook_Logo_%282019%29.png" alt="FB">
+        </a>
+    </div>
+    <video autoplay muted loop id="video-background">
+        <source src="{{ url_for('static', filename='videos/background.mp4') }}" type="video/mp4">
+        Trình duyệt của bạn không hỗ trợ video.
+    </video>
+    <div class="overlay"></div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                        {% for category, message in messages %}
+                <div class="{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                {% endif %}
+            {% endwith %}
+    
+    <div class="container">
+        <h2>🔐 Đăng nhập</h2>
+
+            <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">👤 Tên đăng nhập:</label>
+                <input type="text" id="username" name="username" required placeholder="Nhập tên đăng nhập">
+                </div>
+            
+            <div class="form-group">
+                <label for="password">🔑 Mật khẩu:</label>
+                <div class="password-field">
+                    <input type="password" id="password" name="password" required placeholder="Nhập mật khẩu">
+                    <button type="button" class="toggle-password" onclick="togglePassword('password')">👁️</button>
+                </div>
+                </div>
+            
+            <div class="forgot-password">
+                <a href="{{ url_for('forgot_password') }}">🔄 Quên mật khẩu?</a>
+            </div>
+            
+            <button type="submit">✨ Đăng nhập</button>
+        </form>
+
+        <div class="social-login">
+            <p>🌟 Hoặc đăng nhập với:</p>
+            <a href="{{ url_for('google_login') }}" class="social-btn google-btn">
+                <img src="https://www.google.com/favicon.ico" alt="Google">
+                Đăng nhập với Google
+            </a>
+        </div>
+
+        <div class="register-link">
+            🆕 Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký ngay</a>
+        </div>
+    </div>
+
+    <div class="page-transition"></div>
+
+    <script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🔒';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
+        // Tự động ẩn thông báo sau 3.5 giây
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.success, .error');
+            messages.forEach(function(message) {
+                setTimeout(function() {
+                    message.remove();
+                }, 3500);
+            });
+        });
+
+        // Đơn giản hóa hiệu ứng chuyển trang
+        document.addEventListener('DOMContentLoaded', function() {
+            const transition = document.querySelector('.page-transition');
+            const links = document.querySelectorAll('a:not([target="_blank"])');
+            const forms = document.querySelectorAll('form');
+
+            // Xử lý click vào links
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    transition.classList.add('active');
+                    
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 300);
+                });
+            });
+
+            // Xử lý submit form
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!e.submitter.classList.contains('toggle-password')) {
+                        transition.classList.add('active');
+                    }
+                });
+            });
+
+            // Hiệu ứng fade in khi trang load xong
+            window.addEventListener('load', function() {
+                document.body.style.opacity = 0;
+                setTimeout(() => {
+                    document.body.style.transition = 'opacity 0.3s ease';
+                    document.body.style.opacity = 1;
+                }, 0);
+            });
+        });
+    </script>
+</body>
+</html>
