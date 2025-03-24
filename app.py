@@ -404,5 +404,20 @@ def backup_account():
 
 if __name__ == '__main__':
     init_db()
+    
+    # Cho phép HTTP trong development
+    if not os.environ.get('PRODUCTION', False):
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    
+    # Cấu hình SSL context cho HTTPS
+    ssl_context = None
+    if os.environ.get('PRODUCTION', False):
+        ssl_context = 'adhoc'
+    
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        ssl_context=ssl_context,
+        debug=not os.environ.get('PRODUCTION', False)
+    )

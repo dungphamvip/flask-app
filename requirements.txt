@@ -10,3 +10,4 @@ google-auth-oauthlib==0.4.6
 google-auth-httplib2==0.1.0
 google-api-python-client==2.33.0
 Flask-Mail==0.9.1
+pyOpenSSL==23.2.0
