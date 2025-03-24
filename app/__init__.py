@@ -69,6 +69,34 @@ def login():
     
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        if User.query.filter_by(username=username).first():
+            flash('Tên đăng nhập đã tồn tại!', 'error')
+            return render_template('register.html')
+            
+        if User.query.filter_by(email=email).first():
+            flash('Email đã được sử dụng!', 'error')
+            return render_template('register.html')
+            
+        user = User(username=username, email=email)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Đăng ký thành công! Vui lòng đăng nhập.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('register.html')
+
 # Google Login Routes
 @app.route('/google-login')
 def google_login():
