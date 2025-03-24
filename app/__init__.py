@@ -52,26 +52,22 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    try:
-        if current_user.is_authenticated:
-            return redirect(url_for('dashboard'))
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
 
-        if request.method == 'POST':
-            username = request.form.get('username')
-            password = request.form.get('password')
-            user = User.query.filter_by(username=username).first()
-            
-            if user and user.check_password(password):
-                login_user(user)
-                flash('Đăng nhập thành công!', 'success')
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Tên đăng nhập hoặc mật khẩu không đúng!', 'error')
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
         
-        return render_template('login.html')
-    except Exception as e:
-        app.logger.error(f"Login error: {str(e)}")
-        return render_template('login.html')
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Đăng nhập thành công!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Tên đăng nhập hoặc mật khẩu không đúng!', 'error')
+    
+    return render_template('login.html')
 
 # Google Login Routes
 @app.route('/google-login')
@@ -142,6 +138,11 @@ def logout():
     logout_user()
     flash('Đã đăng xuất!', 'success')
     return redirect(url_for('login'))
+
+# Thêm route quên mật khẩu
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    return render_template('forgot_password.html')
 
 # Khởi tạo database
 with app.app_context():
