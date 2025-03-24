@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: flask-app
+    env: python
+    buildCommand: ./build.sh
+    startCommand: python -m gunicorn app:app
+    envVars:
+      - key: PRODUCTION
+        value: true
+      - key: PYTHON_VERSION
+        value: 3.9.18
+      - key: PATH
+        value: /opt/render/project/python/.local/bin:/opt/render/project/python/bin:$PATH
