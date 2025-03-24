@@ -12,7 +12,7 @@ import json
 # Load biến môi trường
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates')  # Chú ý đường dẫn template
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -71,7 +71,6 @@ def login():
         return render_template('login.html')
     except Exception as e:
         app.logger.error(f"Login error: {str(e)}")
-        flash('Có lỗi xảy ra. Vui lòng thử lại sau.', 'error')
         return render_template('login.html')
 
 # Google Login Routes
